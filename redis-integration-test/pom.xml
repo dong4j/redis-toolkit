@@ -11,5 +11,26 @@
 
     <artifactId>redis-integration-test</artifactId>
 
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <!-- 测试套件 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
 
+        <!-- redis 单机测试-->
+        <dependency>
+            <groupId>info.dong4j</groupId>
+            <artifactId>redis-standalone</artifactId>
+            <version>${parent.version}</version>
+        </dependency>
+    </dependencies>
 </project>
