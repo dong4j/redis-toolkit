@@ -106,8 +106,6 @@ public class JedisSentinelConfiguration extends CachingConfigurerSupport {
     @Bean
     public JedisConnectionFactory jedisConnectionFactory() {
         JedisConnectionFactory factory = new JedisConnectionFactory(redisSentinelConfiguration(), jedisPoolConfig());
-        // factory.setHostName(redisProperties.getHost());
-        // factory.setPort(redisProperties.getPort());
         factory.setTimeout(this.timeout);
         factory.setPassword(StringUtils.isBlank(this.password) ? null : this.password);
         return factory;

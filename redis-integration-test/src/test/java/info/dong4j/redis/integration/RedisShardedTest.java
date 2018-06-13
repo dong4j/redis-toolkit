@@ -28,17 +28,23 @@ public class RedisShardedTest {
 
     @Test
     public void testShardedRedis() {
-        ShardedJedis jedis = shardedJedisPool.getResource();
-        log.info(jedis.toString());
         for (int i = 0; i < 1000; i++) {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            jedis.set("testShardedRedis_" + i, "testShardedRedis_" + i);
+            setTest("testShardedRedis_" + i, "testShardedRedis_" + i);
             log.info("set testShardedRedis_{}", i);
-            log.info("get testShardedRedis_{}, value = {}", i, jedis.get("testShardedRedis_" + i));
+        }
+    }
+
+    private void setTest(String key, String value) {
+        try (ShardedJedis jedis = shardedJedisPool.getResource()) {
+            jedis.set(key, value);
+            log.info(jedis.get(key));
+        } catch (Exception e) {
+            log.error("set error", e);
         }
     }
 }

@@ -28,17 +28,40 @@ public class RedisStandaloneTest {
 
     @Test
     public void testStandaloneRedis() {
-        Jedis jedis = jedisPool.getResource();
-        log.info(jedis.info());
         for (int i = 0; i < 1000; i++) {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            jedis.set("testStandaloneRedis_" + i, "testStandaloneRedis_" + i);
+            setTest("testStandaloneRedis_" + i, "testStandaloneRedis_" + i);
             log.info("set testStandaloneRedis_{}", i);
-            log.info("get testStandaloneRedis_{}, value = {}", i, jedis.get("testStandaloneRedis_" + i));
+        }
+    }
+
+    private void setTest(String key, String value) {
+        try (Jedis jedis = jedisPool.getResource()) {
+            jedis.set(key, value);
+            log.info(jedis.get(key));
+        } catch (Exception e) {
+            log.error("set error", e);
+        }
+    }
+
+    private void setTest1(String key, String value) {
+        Jedis jedis = null;
+        try {
+            // 从连接池获取一个Jedis实例
+            jedis = jedisPool.getResource();
+            jedis.set(key, value);
+            log.info(jedis.get(key));
+        } catch (Exception e) {
+            log.error("set error", e);
+        } finally {
+            if (null != jedis) {
+                // 释放资源还给连接池
+                jedis.close();
+            }
         }
     }
 }

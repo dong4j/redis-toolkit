@@ -66,31 +66,10 @@ public class JedisConfiguration {
         return jedisPoolConfig;
     }
 
-    // <bean id="shardedJedisPool" class="redis.clients.jedis.ShardedJedisPool">
-    //     <constructor-arg index="0" ref="jedisPoolConfig" />
-    //     <constructor-arg index="1">
-    //         <list>
-    //             <bean class="redis.clients.jedis.JedisShardInfo">
-    //                 <!-- jedis URI配置   redis://password@ip:port/database   -->
-    //                 <constructor-arg value="redis://redis:@127.0.0.1:6379/0" type="java.net.URI"/>
-    //             </bean>
-    //             <bean class="redis.clients.jedis.JedisShardInfo">
-    //                 <!-- jedis URI配置   redis://redis:password@ip:port/database   -->
-    //                 <constructor-arg value="redis://redis:@127.0.0.1:6380/0" type="java.net.URI"/>
-    //             </bean>
-    //             <bean class="redis.clients.jedis.JedisShardInfo">
-    //                 <!-- jedis URI配置   redis://redis:password@ip:port/database   -->
-    //                 <constructor-arg value="redis://redis:@127.0.0.1:6381/0" type="java.net.URI"/>
-    //             </bean>
-    //         </list>
-    //     </constructor-arg>
-    // </bean>
-
     @Bean(name = "shardedJedisPool", destroyMethod = "destroy")
     public ShardedJedisPool shardedJedisPool() {
         return new ShardedJedisPool(jedisPoolConfig(), new ArrayList<JedisShardInfo>() {
             private static final long serialVersionUID = -6785278696454543117L;
-
             {
                 add(new JedisShardInfo(uri0));
                 add(new JedisShardInfo(uri1));
