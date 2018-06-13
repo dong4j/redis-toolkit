@@ -68,6 +68,11 @@ public class JedisConfiguration {
         return jedisPoolConfig;
     }
 
+    /**
+     * Jedis pool jedis pool.
+     *
+     * @return the jedis pool
+     */
     @Bean(name = "jedisPool", destroyMethod = "destroy")
     public JedisPool jedisPool() {
         return new JedisPool(jedisPoolConfig(),
