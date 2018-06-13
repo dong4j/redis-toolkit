@@ -15,6 +15,7 @@
         <module>redis-cluster</module>
         <module>redis-sentinel</module>
         <module>redis-api</module>
+        <module>spring-redis-sentinel</module>
     </modules>
     <artifactId>redis-component</artifactId>
 

@@ -46,5 +46,12 @@
             <artifactId>redis-sentinel</artifactId>
             <version>${parent.version}</version>
         </dependency>
+
+        <!-- spring redis sentinel -->
+        <dependency>
+            <groupId>info.dong4j</groupId>
+            <artifactId>spring-redis-sentinel</artifactId>
+            <version>${parent.version}</version>
+        </dependency>
     </dependencies>
 </project>
