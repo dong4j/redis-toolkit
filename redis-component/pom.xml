@@ -16,6 +16,7 @@
         <module>redis-sentinel</module>
         <module>redis-api</module>
         <module>spring-redis-sentinel</module>
+        <module>redis-sharded-sentinel</module>
     </modules>
     <artifactId>redis-component</artifactId>
 

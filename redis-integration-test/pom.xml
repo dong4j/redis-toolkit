@@ -53,5 +53,12 @@
             <artifactId>spring-redis-sentinel</artifactId>
             <version>${parent.version}</version>
         </dependency>
+
+        <!-- JedisShardedSentinelPool -->
+        <dependency>
+            <groupId>info.dong4j</groupId>
+            <artifactId>redis-sharded-sentinel</artifactId>
+            <version>${parent.version}</version>
+        </dependency>
     </dependencies>
 </project>

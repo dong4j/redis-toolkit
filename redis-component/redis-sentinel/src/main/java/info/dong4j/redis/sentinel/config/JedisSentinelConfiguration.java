@@ -51,7 +51,6 @@ public class JedisSentinelConfiguration {
      */
     @Bean
     public JedisPoolConfig jedisPoolConfig() {
-        log.debug("fkh-base-redis: init JedisPoolConfig instance");
         JedisPoolConfig jedisPoolConfig = new JedisPoolConfig();
         // 连接池最大连接数（使用负值表示没有限制）
         jedisPoolConfig.setMaxTotal(this.maxTotal);
