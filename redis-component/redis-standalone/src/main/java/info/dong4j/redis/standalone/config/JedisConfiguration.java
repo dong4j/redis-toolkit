@@ -5,8 +5,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
@@ -19,8 +17,6 @@ import redis.clients.jedis.JedisPoolConfig;
  * @date 2018-06-13  10:24
  */
 @Slf4j
-@Getter
-@Setter
 @Configuration
 public class JedisConfiguration {
     @Value("${redis.host}")
@@ -76,9 +72,9 @@ public class JedisConfiguration {
     @Bean(name = "jedisPool", destroyMethod = "destroy")
     public JedisPool jedisPool() {
         return new JedisPool(jedisPoolConfig(),
-                             this.getHost(),
-                             this.getPort(),
-                             this.getTimeout(),
-                             StringUtils.isBlank(this.getPassword()) ? null : this.getPassword());
+                             this.host,
+                             this.port,
+                             this.timeout,
+                             StringUtils.isBlank(this.password) ? null : this.password);
     }
 }

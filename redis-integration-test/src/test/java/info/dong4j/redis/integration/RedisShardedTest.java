@@ -8,11 +8,11 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import lombok.extern.slf4j.Slf4j;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.ShardedJedis;
+import redis.clients.jedis.ShardedJedisPool;
 
 /**
- * <p>Description: 单机模式</p>
+ * <p>Description: 分片模式</p>
  *
  * @author dong4j
  * @email dong4j@gmail.com
@@ -21,24 +21,24 @@ import redis.clients.jedis.JedisPool;
 @Slf4j
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringBootTest
-@ContextConfiguration(locations = {"classpath:/application-standalone-redis.xml"})
-public class RedisStandaloneTest {
+@ContextConfiguration(locations = {"classpath:/application-sharded-redis.xml"})
+public class RedisShardedTest {
     @Autowired
-    private JedisPool jedisPool;
+    private ShardedJedisPool shardedJedisPool;
 
     @Test
-    public void testStandaloneRedis() {
-        Jedis jedis = jedisPool.getResource();
-        log.info(jedis.info());
+    public void testShardedRedis() {
+        ShardedJedis jedis = shardedJedisPool.getResource();
+        log.info(jedis.toString());
         for (int i = 0; i < 1000; i++) {
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            jedis.set("testStandaloneRedis_" + i, "testStandaloneRedis_" + i);
-            log.info("set testStandaloneRedis_{}", i);
-            log.info("get testStandaloneRedis_{}, value = {}", i, jedis.get("testStandaloneRedis_" + i));
+            jedis.set("testShardedRedis_" + i, "testShardedRedis_" + i);
+            log.info("set testShardedRedis_{}", i);
+            log.info("get testShardedRedis_{}, value = {}", i, jedis.get("testShardedRedis_" + i));
         }
     }
 }

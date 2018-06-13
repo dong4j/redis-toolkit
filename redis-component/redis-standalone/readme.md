@@ -21,3 +21,7 @@
 此模式需要添加 
 
 spring.profiles.acrive=standalone
+
+**配置文件为**
+
+`application-standalone.properties`

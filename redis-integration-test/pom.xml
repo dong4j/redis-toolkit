@@ -32,5 +32,12 @@
             <artifactId>redis-standalone</artifactId>
             <version>${parent.version}</version>
         </dependency>
+
+        <!-- 分片模式 -->
+        <dependency>
+            <groupId>info.dong4j</groupId>
+            <artifactId>redis-sharded</artifactId>
+            <version>${parent.version}</version>
+        </dependency>
     </dependencies>
 </project>
