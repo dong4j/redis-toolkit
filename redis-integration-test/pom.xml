@@ -39,5 +39,12 @@
             <artifactId>redis-sharded</artifactId>
             <version>${parent.version}</version>
         </dependency>
+
+        <!-- 哨兵模式-->
+        <dependency>
+            <groupId>info.dong4j</groupId>
+            <artifactId>redis-sentinel</artifactId>
+            <version>${parent.version}</version>
+        </dependency>
     </dependencies>
 </project>
