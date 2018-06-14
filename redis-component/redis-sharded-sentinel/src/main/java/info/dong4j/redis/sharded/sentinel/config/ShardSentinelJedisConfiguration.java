@@ -12,6 +12,7 @@ import java.net.*;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import lombok.extern.slf4j.Slf4j;
@@ -146,13 +147,13 @@ public class ShardSentinelJedisConfiguration {
                 // redis://127.0.0.1:26379,redis://127.0.0.1:26380,redis://127.0.0.1:26381
                 String[] sentinels = nodeInfo[1].split(COMMA);
                 for (String sentinel : sentinels) {
-                    URI uri = null;
+                    URI uri;
                     try {
                         uri = new URI(sentinel);
                     } catch (URISyntaxException e) {
                         throw new RuntimeException("sentinel node analysis error, please use pattern like redis://[password@]ip:port[/database], sentinelNode = " + sentinelNode);
                     }
-                    if (!uri.getScheme().equals(AGREEMENT)) {
+                    if (!Objects.equals(uri.getScheme(), AGREEMENT)) {
                         throw new RuntimeException("please use [redis://] agreement");
                     }
                     sentinelSet.add(uri.getHost() + COLON + uri.getPort());

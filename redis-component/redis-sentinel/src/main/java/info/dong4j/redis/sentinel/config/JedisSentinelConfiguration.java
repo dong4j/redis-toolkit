@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 
 import java.net.*;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 import lombok.extern.slf4j.Slf4j;
@@ -118,7 +119,7 @@ public class JedisSentinelConfiguration {
                 } catch (URISyntaxException e) {
                     throw new RuntimeException("sentinel node analysis error, please use pattern like redis://[password@]ip:port[/database], sentinelNode = " + sentinelNode);
                 }
-                if (!uri.getScheme().equals(AGREEMENT)) {
+                if (!Objects.equals(uri.getScheme(), AGREEMENT)) {
                     throw new RuntimeException("please use [redis://] agreement");
                 }
                 sentinelSet.add(uri.getHost() + COLON + uri.getPort());

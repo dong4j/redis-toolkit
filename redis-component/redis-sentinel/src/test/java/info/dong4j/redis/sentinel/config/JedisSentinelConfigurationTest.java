@@ -14,8 +14,8 @@ import org.junit.Test;
 public class JedisSentinelConfigurationTest {
     @Test
     public void test() {
-        String   node      = "mymaster#redis://127.0.0.1:26379,redis://127.0.0.1:26380,redis://127.0.0.1:26381;xxx";
-        String[] nodeSplit = node.split("#");
+        String   node      = ";";
+        String[] nodeSplit = node.split(";");
         System.out.println(nodeSplit.length);
         System.out.println(nodeSplit[0]);
 

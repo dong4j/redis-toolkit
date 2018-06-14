@@ -1,11 +1,14 @@
 package info.dong4j.redis.sharded.config;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.net.*;
 import java.util.ArrayList;
+import java.util.Objects;
 
 import lombok.extern.slf4j.Slf4j;
 import redis.clients.jedis.JedisPoolConfig;
@@ -22,6 +25,12 @@ import redis.clients.jedis.ShardedJedisPool;
 @Slf4j
 @Configuration
 public class ShardJedisConfiguration {
+    public static final String COMMA               = ",";
+    public static final String SEMICOLON           = ";";
+    public static final String COLON               = ":";
+    public static final String BUSINESS_SEPARATION = "#";
+    public static final String AGREEMENT           = "redis";
+
     @Value("${redis.node}")
     private String  redisNode;
     @Value("${redis.connectionTimeout}")
@@ -68,12 +77,31 @@ public class ShardJedisConfiguration {
     @ConditionalOnProperty(value = "redis.model", havingValue = "sharding")
     @Bean(name = "shardedJedisPool", destroyMethod = "destroy")
     public ShardedJedisPool shardedJedisPool() {
+        // redis://127.0.0.1:6379;redis://127.0.0.1:6382
+        if (StringUtils.isBlank(redisNode)) {
+            throw new RuntimeException("redis node must to configure");
+        }
+
         return new ShardedJedisPool(jedisPoolConfig(), new ArrayList<JedisShardInfo>() {
             private static final long serialVersionUID = -6785278696454543117L;
-            String[] nodes = redisNode.split(";");
+            String[] nodes = redisNode.split(SEMICOLON);
 
             {
+                if (nodes.length == 0) {
+                    throw new RuntimeException("redis node must to configure");
+                }
+                URI uri;
                 for (String node : nodes) {
+
+                    try {
+                        uri = new URI(node);
+                    } catch (URISyntaxException e) {
+                        throw new RuntimeException("sentinel node analysis error, please use pattern like redis://[password@]ip:port[/database], sentinelNode = " + node);
+                    }
+                    if (!Objects.equals(uri.getScheme(), AGREEMENT)) {
+                        throw new RuntimeException("please use [redis://] agreement");
+                    }
+
                     JedisShardInfo jedisShardInfo = new JedisShardInfo(node);
                     jedisShardInfo.setConnectionTimeout(connectionTimeout);
                     jedisShardInfo.setSoTimeout(soTimeout);
