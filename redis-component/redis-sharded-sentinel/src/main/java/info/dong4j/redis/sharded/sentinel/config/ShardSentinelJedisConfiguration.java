@@ -30,6 +30,13 @@ import redis.clients.util.JedisURIHelper;
 public class ShardSentinelJedisConfiguration {
     private static final int DEFAULT_MAX_REDIRECTIONS = 5;
     private static final int DEFAULT_DATABASE         = 0;
+
+    public static final String COMMA               = ",";
+    public static final String SEMICOLON           = ";";
+    public static final String COLON               = ":";
+    public static final String BUSINESS_SEPARATION = "#";
+    public static final String AGREEMENT           = "redis";
+
     @Value("${redis.sentinel.node}")
     private String sentinelNode;
 
@@ -115,38 +122,47 @@ public class ShardSentinelJedisConfiguration {
     @ConditionalOnProperty(value = "redis.model", havingValue = "sharding-sentinel")
     @Bean(name = "shardedJedisSentinelPool", destroyMethod = "destroy")
     public ShardedJedisSentinelPool shardedJedisSentinelPool() {
-        String[] nodes = sentinelNode.split(";");
-
+        // mymaster#redis://127.0.0.1:26379,redis://127.0.0.1:26380,redis://127.0.0.1:26381;mymaster#redis://127.0.0.1:26379,redis://127.0.0.1:26380,redis://127.0.0.1:26381
+        if (StringUtils.isBlank(sentinelNode)) {
+            throw new RuntimeException("sentinel must to configure");
+        }
+        String[] nodes = sentinelNode.split(SEMICOLON);
+        if (nodes.length == 1) {
+            throw new RuntimeException("current redis model is sharding-sentinel, support multiple groups sentinel, if has one group sentinel, please use sentinel model for performance");
+        }
         List<String> masterList  = new ArrayList<>(nodes.length);
         Set<String>  sentinelSet = new HashSet<>();
         String       password    = null;
         boolean      flag        = true;
-        try {
-            for (String node : nodes) {
-                if (StringUtils.isNotBlank(node)) {
-                    // mymaster#redis://127.0.0.1:26379,redis://127.0.0.1:26380,redis://127.0.0.1:26381
-                    String[] nodeInfo = node.split("#");
-                    if (nodeInfo.length != 2) {
-                        throw new RuntimeException("node config error");
-                    }
-                    String masterName = nodeInfo[0];
-                    masterList.add(masterName);
+        for (String node : nodes) {
+            if (StringUtils.isNotBlank(node)) {
+                String[] nodeInfo = node.split(BUSINESS_SEPARATION);
+                if (nodeInfo.length != 2) {
+                    throw new RuntimeException("please use pattern like masterName#redis://[password@]ip:port[/database]");
+                }
+                String masterName = nodeInfo[0];
+                masterList.add(masterName);
 
-                    // redis://127.0.0.1:26379,redis://127.0.0.1:26380,redis://127.0.0.1:26381
-                    String[] sentinels = nodeInfo[1].split(",");
-                    for (String sentinel : sentinels) {
-                        URI uri = new URI(sentinel);
-                        sentinelSet.add(uri.getHost() + ":" + uri.getPort());
-                        String ps = JedisURIHelper.getPassword(uri);
-                        if (flag && StringUtils.isNotBlank(ps)) {
-                            password = ps;
-                            flag = false;
-                        }
+                // redis://127.0.0.1:26379,redis://127.0.0.1:26380,redis://127.0.0.1:26381
+                String[] sentinels = nodeInfo[1].split(COMMA);
+                for (String sentinel : sentinels) {
+                    URI uri = null;
+                    try {
+                        uri = new URI(sentinel);
+                    } catch (URISyntaxException e) {
+                        throw new RuntimeException("sentinel node analysis error, please use pattern like redis://[password@]ip:port[/database], sentinelNode = " + sentinelNode);
+                    }
+                    if (!uri.getScheme().equals(AGREEMENT)) {
+                        throw new RuntimeException("please use [redis://] agreement");
+                    }
+                    sentinelSet.add(uri.getHost() + COLON + uri.getPort());
+                    String ps = JedisURIHelper.getPassword(uri);
+                    if (flag && StringUtils.isNotBlank(ps)) {
+                        password = ps;
+                        flag = false;
                     }
                 }
             }
-        } catch (Exception e) {
-            throw new RuntimeException("sentinel node analysis error, sentinelNode = " + sentinelNode);
         }
 
         return new ShardedJedisSentinelPool(masterList,

@@ -2,15 +2,18 @@ package info.dong4j.redis.sentinel.config;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.Arrays;
+import java.net.*;
 import java.util.HashSet;
+import java.util.Set;
 
 import lombok.extern.slf4j.Slf4j;
 import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.JedisSentinelPool;
+import redis.clients.util.JedisURIHelper;
 
 /**
  * <p>Description: redis sentinel 配置类</p>
@@ -22,14 +25,19 @@ import redis.clients.jedis.JedisSentinelPool;
 @Slf4j
 @Configuration
 public class JedisSentinelConfiguration {
-    @Value("${redis.password}")
-    private String  password;
+    public static final String COMMA               = ",";
+    public static final String SEMICOLON           = ";";
+    public static final String COLON               = ":";
+    public static final String BUSINESS_SEPARATION = "#";
+    public static final String AGREEMENT           = "redis";
+
+    @Value("${redis.sentinel.node}")
+    private String  sentinelNode;
+    /** 等待Response超时时间 */
+    @Value("${redis.soTimeout}")
+    private int     soTimeout;
     @Value("${redis.connectionTimeout}")
-    private int     timeout;
-    @Value("${redis.sentinel.nodes}")
-    private String  sentinelNodes;
-    @Value("${redis.sentinel.master}")
-    private String  master;
+    private int     connectionTimeout;
     @Value("${redis.pool.maxActive}")
     private int     maxTotal;
     @Value("${redis.pool.maxWait}")
@@ -66,13 +74,66 @@ public class JedisSentinelConfiguration {
         return jedisPoolConfig;
     }
 
+
+    // public JedisSentinelPool(String masterName, Set<String> sentinels,
+    //                          final GenericObjectPoolConfig poolConfig, final int connectionTimeout, final int soTimeout,
+    //                          final String password, final int database, final String clientName) {
+    //     this.poolConfig = poolConfig;
+    //     this.connectionTimeout = connectionTimeout;
+    //     this.soTimeout = soTimeout;
+    //     this.password = password;
+    //     this.database = database;
+    //     this.clientName = clientName;
+    // }
+
+    @ConditionalOnProperty(value = "redis.model", havingValue = "sentinel")
     @Bean(name = "jedisSentinelPool", destroyMethod = "destroy")
     public JedisSentinelPool jedisSentinelPool() {
-        String[] host = this.sentinelNodes.split(",");
-        return new JedisSentinelPool(this.master,
-                                     new HashSet<>(Arrays.asList(host)),
+        // mymaster#redis://127.0.0.1:26379,redis://127.0.0.1:26380,redis://127.0.0.1:26381
+        if (StringUtils.isBlank(sentinelNode)) {
+            throw new RuntimeException("sentinel must to configure");
+        }
+        String[] nodes = sentinelNode.split(SEMICOLON);
+        if (nodes.length > 1) {
+            throw new RuntimeException("current redis model is sentinel, cannot support multiple groups sentinel, please use shard-sentinel model");
+        }
+        String node = nodes[0];
+
+        String      masterName  = null;
+        Set<String> sentinelSet = new HashSet<>();
+        String      password    = null;
+        boolean     flag        = true;
+        if (StringUtils.isNotBlank(node)) {
+            String[] nodeInfo = node.split(BUSINESS_SEPARATION);
+            if (!node.contains(BUSINESS_SEPARATION) || nodeInfo.length != 2) {
+                throw new RuntimeException("please use pattern like masterName#redis://[password@]ip:port[/database]");
+            }
+            masterName = nodeInfo[0];
+            // redis://127.0.0.1:26379,redis://127.0.0.1:26380,redis://127.0.0.1:26381
+            String[] sentinels = nodeInfo[1].split(COMMA);
+            for (String sentinel : sentinels) {
+                URI uri;
+                try {
+                    uri = new URI(sentinel);
+                } catch (URISyntaxException e) {
+                    throw new RuntimeException("sentinel node analysis error, please use pattern like redis://[password@]ip:port[/database], sentinelNode = " + sentinelNode);
+                }
+                if (!uri.getScheme().equals(AGREEMENT)) {
+                    throw new RuntimeException("please use [redis://] agreement");
+                }
+                sentinelSet.add(uri.getHost() + COLON + uri.getPort());
+                String ps = JedisURIHelper.getPassword(uri);
+                if (flag && StringUtils.isNotBlank(ps)) {
+                    password = ps;
+                    flag = false;
+                }
+            }
+        }
+
+        return new JedisSentinelPool(masterName,
+                                     sentinelSet,
                                      jedisPoolConfig(),
-                                     this.timeout,
-                                     StringUtils.isBlank(this.password) ? null : this.password);
+                                     this.connectionTimeout,
+                                     password);
     }
 }
