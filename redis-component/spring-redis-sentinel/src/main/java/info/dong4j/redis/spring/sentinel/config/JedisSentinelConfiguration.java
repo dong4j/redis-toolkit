@@ -36,7 +36,7 @@ import redis.clients.jedis.JedisPoolConfig;
 public class JedisSentinelConfiguration extends CachingConfigurerSupport {
     @Value("${redis.password}")
     private String  password;
-    @Value("${redis.timeout}")
+    @Value("${redis.connectionTimeout}")
     private int     timeout;
     @Value("${redis.sentinel.nodes}")
     private String  sentinelNodes;

@@ -4,14 +4,19 @@ import info.dong4j.redis.sharded.sentinel.ShardedJedisSentinelPool;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.Arrays;
+import java.net.*;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import lombok.extern.slf4j.Slf4j;
 import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.util.JedisURIHelper;
 
 /**
  * <p>Description: sharded jedis sentinel 配置类</p>
@@ -22,15 +27,17 @@ import redis.clients.jedis.JedisPoolConfig;
  */
 @Slf4j
 @Configuration
-public class JedisConfiguration {
-    @Value("${redis.password}")
-    private String  password;
-    @Value("${redis.timeout}")
-    private int     timeout;
-    @Value("${redis.sentinel.nodes}")
-    private String  sentinelNodes;
-    @Value("${redis.sentinel.masters}")
-    private String  masters;
+public class ShardSentinelJedisConfiguration {
+    private static final int DEFAULT_MAX_REDIRECTIONS = 5;
+    private static final int DEFAULT_DATABASE         = 0;
+    @Value("${redis.sentinel.node}")
+    private String sentinelNode;
+
+    @Value("${redis.connectionTimeout}")
+    private int     connectionTimeout;
+    /** 等待Response超时时间 */
+    @Value("${redis.soTimeout}")
+    private int     soTimeout;
     @Value("${redis.pool.maxActive}")
     private int     maxTotal;
     @Value("${redis.pool.maxWait}")
@@ -105,15 +112,51 @@ public class JedisConfiguration {
     // 	<constructor-arg index="2" ref="jedisPoolConfig" />
     // </bean>
 
+    @ConditionalOnProperty(value = "redis.model", havingValue = "sharding-sentinel")
     @Bean(name = "shardedJedisSentinelPool", destroyMethod = "destroy")
     public ShardedJedisSentinelPool shardedJedisSentinelPool() {
-        return new ShardedJedisSentinelPool(Arrays.asList(masters.split(",")), new HashSet<String>() {
-            private static final long serialVersionUID = -6032491572148753139L;
-            String[] sentinels = sentinelNodes.split(",");
+        String[] nodes = sentinelNode.split(";");
 
-            {
-                this.addAll(Arrays.asList(sentinels));
+        List<String> masterList  = new ArrayList<>(nodes.length);
+        Set<String>  sentinelSet = new HashSet<>();
+        String       password    = null;
+        boolean      flag        = true;
+        try {
+            for (String node : nodes) {
+                if (StringUtils.isNotBlank(node)) {
+                    // mymaster#redis://127.0.0.1:26379,redis://127.0.0.1:26380,redis://127.0.0.1:26381
+                    String[] nodeInfo = node.split("#");
+                    if (nodeInfo.length != 2) {
+                        throw new RuntimeException("node config error");
+                    }
+                    String masterName = nodeInfo[0];
+                    masterList.add(masterName);
+
+                    // redis://127.0.0.1:26379,redis://127.0.0.1:26380,redis://127.0.0.1:26381
+                    String[] sentinels = nodeInfo[1].split(",");
+                    for (String sentinel : sentinels) {
+                        URI uri = new URI(sentinel);
+                        sentinelSet.add(uri.getHost() + ":" + uri.getPort());
+                        String ps = JedisURIHelper.getPassword(uri);
+                        if (flag && StringUtils.isNotBlank(ps)) {
+                            password = ps;
+                            flag = false;
+                        }
+                    }
+                }
             }
-        }, jedisPoolConfig(), timeout, 5, timeout, StringUtils.isBlank(password) ? null : password, 0);
+        } catch (Exception e) {
+            throw new RuntimeException("sentinel node analysis error, sentinelNode = " + sentinelNode);
+        }
+
+        return new ShardedJedisSentinelPool(masterList,
+                                            sentinelSet,
+                                            jedisPoolConfig(),
+                                            soTimeout,
+                                            DEFAULT_MAX_REDIRECTIONS,
+                                            connectionTimeout,
+                                            password,
+                                            DEFAULT_DATABASE);
+
     }
 }

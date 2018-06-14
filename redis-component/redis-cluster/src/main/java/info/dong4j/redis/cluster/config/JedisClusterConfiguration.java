@@ -28,7 +28,7 @@ public class JedisClusterConfiguration {
     private String  redisNodes;
     @Value("${redis.password}")
     private String  password;
-    @Value("${redis.timeout}")
+    @Value("${redis.connectionTimeout}")
     private int     timeout;
     @Value("${redis.pool.maxActive}")
     private int     maxTotal;

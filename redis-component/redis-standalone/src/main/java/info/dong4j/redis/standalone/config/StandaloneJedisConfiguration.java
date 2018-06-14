@@ -21,7 +21,7 @@ import redis.clients.util.JedisURIHelper;
  */
 @Slf4j
 @Configuration
-public class JedisConfiguration {
+public class StandaloneJedisConfiguration {
     @Value("${redis.node}")
     private String  redisNode;
     @Value("${redis.connectionTimeout}")

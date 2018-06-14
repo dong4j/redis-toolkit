@@ -1,10 +1,10 @@
 package info.dong4j.redis.sharded.config;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.net.*;
 import java.util.ArrayList;
 
 import lombok.extern.slf4j.Slf4j;
@@ -21,14 +21,14 @@ import redis.clients.jedis.ShardedJedisPool;
  */
 @Slf4j
 @Configuration
-public class JedisConfiguration {
-    /** redis://password@ip:port/database */
-    @Value("${redis.uri.0}")
-    private URI     uri0;
-    @Value("${redis.uri.1}")
-    private URI     uri1;
-    @Value("${redis.timeout}")
-    private int     timeout;
+public class ShardJedisConfiguration {
+    @Value("${redis.node}")
+    private String  redisNode;
+    @Value("${redis.connectionTimeout}")
+    private int     connectionTimeout;
+    /** 等待Response超时时间 */
+    @Value("${redis.soTimeout}")
+    private int     soTimeout;
     @Value("${redis.pool.maxActive}")
     private int     maxTotal;
     @Value("${redis.pool.maxWait}")
@@ -65,13 +65,20 @@ public class JedisConfiguration {
         return jedisPoolConfig;
     }
 
+    @ConditionalOnProperty(value = "redis.model", havingValue = "sharding")
     @Bean(name = "shardedJedisPool", destroyMethod = "destroy")
     public ShardedJedisPool shardedJedisPool() {
         return new ShardedJedisPool(jedisPoolConfig(), new ArrayList<JedisShardInfo>() {
             private static final long serialVersionUID = -6785278696454543117L;
+            String[] nodes = redisNode.split(";");
+
             {
-                add(new JedisShardInfo(uri0));
-                add(new JedisShardInfo(uri1));
+                for (String node : nodes) {
+                    JedisShardInfo jedisShardInfo = new JedisShardInfo(node);
+                    jedisShardInfo.setConnectionTimeout(connectionTimeout);
+                    jedisShardInfo.setSoTimeout(soTimeout);
+                    add(jedisShardInfo);
+                }
             }
         });
     }

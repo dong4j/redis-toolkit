@@ -24,7 +24,7 @@ import redis.clients.jedis.JedisSentinelPool;
 public class JedisSentinelConfiguration {
     @Value("${redis.password}")
     private String  password;
-    @Value("${redis.timeout}")
+    @Value("${redis.connectionTimeout}")
     private int     timeout;
     @Value("${redis.sentinel.nodes}")
     private String  sentinelNodes;
