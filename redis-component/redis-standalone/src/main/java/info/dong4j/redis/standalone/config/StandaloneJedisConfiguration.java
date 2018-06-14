@@ -1,11 +1,13 @@
 package info.dong4j.redis.standalone.config;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.net.*;
+import java.util.Objects;
 
 import lombok.extern.slf4j.Slf4j;
 import redis.clients.jedis.JedisPool;
@@ -22,6 +24,8 @@ import redis.clients.util.JedisURIHelper;
 @Slf4j
 @Configuration
 public class StandaloneJedisConfiguration {
+    public static final String AGREEMENT = "redis";
+    public static final String SEMICOLON = ";";
     @Value("${redis.node}")
     private String  redisNode;
     @Value("${redis.connectionTimeout}")
@@ -70,12 +74,23 @@ public class StandaloneJedisConfiguration {
     @ConditionalOnProperty(value = "redis.model", havingValue = "standalone")
     @Bean(name = "jedisPool", destroyMethod = "destroy")
     public JedisPool jedisPool() {
+        // redis.node=redis://127.0.0.1:6382
+        if (StringUtils.isBlank(redisNode)) {
+            throw new RuntimeException("redis node must to configure");
+        }
+        String[] nodes = redisNode.split(SEMICOLON);
+        if (nodes.length > 1) {
+            throw new RuntimeException("current redis model is standalone, cannot support multiple groups redis node, please use shard model");
+        }
 
         URI uri;
         try {
             uri = new URI(redisNode);
         } catch (URISyntaxException e) {
-            throw new RuntimeException("redis node config error");
+            throw new RuntimeException("redis node config error, redisNode = " + redisNode);
+        }
+        if (!Objects.equals(uri.getScheme(), AGREEMENT)) {
+            throw new RuntimeException("please use [redis://] agreement");
         }
         return new JedisPool(jedisPoolConfig(),
                              uri.getHost(),

@@ -135,19 +135,22 @@ public class ShardSentinelJedisConfiguration {
         Set<String>  sentinelSet = new HashSet<>();
         String       password    = null;
         boolean      flag        = true;
+        String[]     nodeInfo;
+        String       masterName;
+        String[]     sentinels;
+        URI          uri;
         for (String node : nodes) {
             if (StringUtils.isNotBlank(node)) {
-                String[] nodeInfo = node.split(BUSINESS_SEPARATION);
+                nodeInfo = node.split(BUSINESS_SEPARATION);
                 if (nodeInfo.length != 2) {
                     throw new RuntimeException("please use pattern like masterName#redis://[password@]ip:port[/database]");
                 }
-                String masterName = nodeInfo[0];
+                masterName = nodeInfo[0];
                 masterList.add(masterName);
 
                 // redis://127.0.0.1:26379,redis://127.0.0.1:26380,redis://127.0.0.1:26381
-                String[] sentinels = nodeInfo[1].split(COMMA);
+                sentinels = nodeInfo[1].split(COMMA);
                 for (String sentinel : sentinels) {
-                    URI uri;
                     try {
                         uri = new URI(sentinel);
                     } catch (URISyntaxException e) {
