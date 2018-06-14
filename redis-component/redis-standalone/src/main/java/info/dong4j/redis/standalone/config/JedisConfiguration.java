@@ -1,14 +1,16 @@
 package info.dong4j.redis.standalone.config;
 
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.net.*;
+
 import lombok.extern.slf4j.Slf4j;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.util.JedisURIHelper;
 
 /**
  * <p>Description: redis 配置类</p>
@@ -20,14 +22,10 @@ import redis.clients.jedis.JedisPoolConfig;
 @Slf4j
 @Configuration
 public class JedisConfiguration {
-    @Value("${redis.host}")
-    private String  host;
-    @Value("${redis.port}")
-    private int     port;
-    @Value("${redis.password}")
-    private String  password;
-    @Value("${redis.timeout}")
-    private int     timeout;
+    @Value("${redis.node}")
+    private String  redisNode;
+    @Value("${redis.connectionTimeout}")
+    private int     connectionTimeout;
     @Value("${redis.pool.maxActive}")
     private int     maxTotal;
     @Value("${redis.pool.maxWait}")
@@ -72,10 +70,17 @@ public class JedisConfiguration {
     @ConditionalOnProperty(value = "redis.model", havingValue = "standalone")
     @Bean(name = "jedisPool", destroyMethod = "destroy")
     public JedisPool jedisPool() {
+
+        URI uri;
+        try {
+            uri = new URI(redisNode);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("redis node config error");
+        }
         return new JedisPool(jedisPoolConfig(),
-                             this.host,
-                             this.port,
-                             this.timeout,
-                             StringUtils.isBlank(this.password) ? null : this.password);
+                             uri.getHost(),
+                             uri.getPort(),
+                             this.connectionTimeout,
+                             JedisURIHelper.getPassword(uri));
     }
 }

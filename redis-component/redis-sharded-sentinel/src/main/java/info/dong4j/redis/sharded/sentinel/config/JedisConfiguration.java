@@ -44,7 +44,6 @@ public class JedisConfiguration {
     @Value("${redis.pool.testOnReturn}")
     private boolean testOnReturn;
 
-
     // <!-- 连接池配置 -->
     // <bean id="jedisPoolConfig" class="redis.clients.jedis.JedisPoolConfig">
     // 	<!-- 最大分配的对象数 -->
