@@ -34,7 +34,7 @@ public class JedisClusterConfiguration {
     public static final  String BUSINESS_SEPARATION      = "#";
     public static final  String AGREEMENT                = "redis";
 
-    @Value("${redis.cluster.node}")
+    @Value("${redis.node}")
     private String redisNode;
 
     @Value("${redis.connectionTimeout}")

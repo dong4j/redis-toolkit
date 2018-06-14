@@ -100,7 +100,7 @@ public class JedisSentinelConfiguration {
         }
         String node = nodes[0];
 
-        String      masterName  = null;
+        String      masterName;
         Set<String> sentinelSet = new HashSet<>();
         String      password    = null;
         boolean     flag        = true;
@@ -129,6 +129,8 @@ public class JedisSentinelConfiguration {
                     flag = false;
                 }
             }
+        } else {
+            throw new RuntimeException("sentinel must to configure");
         }
 
         return new JedisSentinelPool(masterName,

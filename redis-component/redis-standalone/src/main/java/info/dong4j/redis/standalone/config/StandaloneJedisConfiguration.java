@@ -26,8 +26,10 @@ import redis.clients.util.JedisURIHelper;
 public class StandaloneJedisConfiguration {
     public static final String AGREEMENT = "redis";
     public static final String SEMICOLON = ";";
+
     @Value("${redis.node}")
     private String  redisNode;
+
     @Value("${redis.connectionTimeout}")
     private int     connectionTimeout;
     @Value("${redis.pool.maxActive}")

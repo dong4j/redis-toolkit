@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CachingConfigurerSupport;
 import org.springframework.cache.interceptor.KeyGenerator;
@@ -20,9 +21,12 @@ import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.lang.reflect.Method;
+import java.net.*;
+import java.util.Objects;
 
 import lombok.extern.slf4j.Slf4j;
 import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.util.JedisURIHelper;
 
 /**
  * <p>Description: spring redis sentinel 配置类</p>
@@ -34,14 +38,22 @@ import redis.clients.jedis.JedisPoolConfig;
 @Slf4j
 @Configuration
 public class JedisSentinelConfiguration extends CachingConfigurerSupport {
-    @Value("${redis.password}")
-    private String  password;
+    private static final int    DEFAULT_MAX_REDIRECTIONS = 5;
+    private static final int    DEFAULT_DATABASE         = 0;
+    public static final  String COMMA                    = ",";
+    public static final  String SEMICOLON                = ";";
+    public static final  String COLON                    = ":";
+    public static final  String BUSINESS_SEPARATION      = "#";
+    public static final  String AGREEMENT                = "redis";
+    private              String password                 = null;
+
+    @Value("${redis.sentinel.node}")
+    private String  sentinelNode;
+    /** 等待Response超时时间 */
+    @Value("${redis.soTimeout}")
+    private int     soTimeout;
     @Value("${redis.connectionTimeout}")
-    private int     timeout;
-    @Value("${redis.sentinel.nodes}")
-    private String  sentinelNodes;
-    @Value("${redis.sentinel.master}")
-    private String  master;
+    private int     connectionTimeout;
     @Value("${redis.pool.maxActive}")
     private int     maxTotal;
     @Value("${redis.pool.maxWait}")
@@ -84,16 +96,48 @@ public class JedisSentinelConfiguration extends CachingConfigurerSupport {
      * @return redis sentinel configuration
      */
     @Bean
+    @ConditionalOnProperty(value = "redis.model", havingValue = "spring-sentinel")
     public RedisSentinelConfiguration redisSentinelConfiguration() {
         RedisSentinelConfiguration configuration = new RedisSentinelConfiguration();
-        String[]                   host          = this.sentinelNodes.split(",");
-        for (String redisHost : host) {
-            String[] item = redisHost.split(":");
-            String   ip   = item[0];
-            String   port = item[1];
-            configuration.addSentinel(new RedisNode(ip, Integer.parseInt(port)));
+        // redis.sentinel.node=mymaster#redis://127.0.0.1:26379,redis://127.0.0.1:26380,redis://127.0.0.1:26381
+        if (StringUtils.isBlank(sentinelNode)) {
+            throw new RuntimeException("sentinel must to configure");
         }
-        configuration.setMaster(this.master);
+
+        String[] nodes = sentinelNode.split(SEMICOLON);
+        if (nodes.length > 1) {
+            throw new RuntimeException("current redis model is spring-sentinel, cannot support multiple groups sentinel, please use spring-shard-sentinel model");
+        }
+
+        String node = nodes[0];
+
+        // mymaster#redis://127.0.0.1:26379,redis://127.0.0.1:26380,redis://127.0.0.1:26381
+        String[] nodeInfo = node.split(BUSINESS_SEPARATION);
+        if (!node.contains(BUSINESS_SEPARATION) || nodeInfo.length != 2) {
+            throw new RuntimeException("please use pattern like masterName#redis://[password@]ip:port[/database]");
+        }
+        String masterName = nodeInfo[0];
+        // redis://127.0.0.1:26379,redis://127.0.0.1:26380,redis://127.0.0.1:26381
+        String[] sentinels = nodeInfo[1].split(COMMA);
+        boolean  flag      = true;
+        for (String sentinel : sentinels) {
+            URI uri;
+            try {
+                uri = new URI(sentinel);
+            } catch (URISyntaxException e) {
+                throw new RuntimeException("sentinel node analysis error, please use pattern like redis://[password@]ip:port[/database], sentinelNode = " + sentinelNode);
+            }
+            if (!Objects.equals(uri.getScheme(), AGREEMENT)) {
+                throw new RuntimeException("please use [redis://] agreement");
+            }
+            String ps = JedisURIHelper.getPassword(uri);
+            if (flag && StringUtils.isNotBlank(ps)) {
+                password = ps;
+                flag = false;
+            }
+            configuration.addSentinel(new RedisNode(uri.getHost(), uri.getPort()));
+        }
+        configuration.setMaster(masterName);
         return configuration;
     }
 
@@ -103,10 +147,11 @@ public class JedisSentinelConfiguration extends CachingConfigurerSupport {
      * @return jedis connection factory
      */
     @Bean
+    @ConditionalOnProperty(value = "redis.model", havingValue = "spring-sentinel")
     public JedisConnectionFactory jedisConnectionFactory() {
         JedisConnectionFactory factory = new JedisConnectionFactory(redisSentinelConfiguration(), jedisPoolConfig());
-        factory.setTimeout(this.timeout);
-        factory.setPassword(StringUtils.isBlank(this.password) ? null : this.password);
+        factory.setTimeout(this.connectionTimeout);
+        factory.setPassword(password);
         return factory;
     }
 
@@ -120,6 +165,7 @@ public class JedisSentinelConfiguration extends CachingConfigurerSupport {
      * @return redis template
      */
     @Bean
+    @ConditionalOnProperty(value = "redis.model", havingValue = "spring-sentinel")
     @SuppressWarnings("unchecked")
     public RedisTemplate<String, Object> redisTemplate() {
         //StringRedisTemplate的构造方法中默认设置了stringSerializer
@@ -148,6 +194,7 @@ public class JedisSentinelConfiguration extends CachingConfigurerSupport {
      */
     @Override
     @Bean
+    @ConditionalOnProperty(value = "redis.model", havingValue = "spring-sentinel")
     public CacheManager cacheManager() {
         return new RedisCacheManager(redisTemplate());
     }
@@ -156,6 +203,7 @@ public class JedisSentinelConfiguration extends CachingConfigurerSupport {
      * 自定义生成redis-key
      */
     @Override
+    @ConditionalOnProperty(value = "redis.model", havingValue = "spring-sentinel")
     public KeyGenerator keyGenerator() {
         return new KeyGenerator() {
             @Override
