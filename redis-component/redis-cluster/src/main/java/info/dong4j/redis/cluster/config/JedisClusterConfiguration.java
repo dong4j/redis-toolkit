@@ -5,13 +5,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.net.*;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 import lombok.extern.slf4j.Slf4j;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisCluster;
 import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.util.JedisURIHelper;
 
 /**
  * <p>Description: redis 集群整合 </p>
@@ -23,13 +26,22 @@ import redis.clients.jedis.JedisPoolConfig;
 @Slf4j
 @Configuration
 public class JedisClusterConfiguration {
+    private static final int    DEFAULT_MAX_REDIRECTIONS = 5;
+    private static final int    DEFAULT_DATABASE         = 0;
+    public static final  String COMMA                    = ",";
+    public static final  String SEMICOLON                = ";";
+    public static final  String COLON                    = ":";
+    public static final  String BUSINESS_SEPARATION      = "#";
+    public static final  String AGREEMENT                = "redis";
 
-    @Value("${redis.cluster.nodes}")
-    private String  redisNodes;
-    @Value("${redis.password}")
-    private String  password;
+    @Value("${redis.cluster.node}")
+    private String redisNode;
+
     @Value("${redis.connectionTimeout}")
-    private int     timeout;
+    private int     connectionTimeout;
+    /** 等待Response超时时间 */
+    @Value("${redis.soTimeout}")
+    private int     soTimeout;
     @Value("${redis.pool.maxActive}")
     private int     maxTotal;
     @Value("${redis.pool.maxWait}")
@@ -100,20 +112,40 @@ public class JedisClusterConfiguration {
 
     @Bean
     public JedisCluster jedisCluster() {
+        if (StringUtils.isBlank(redisNode)) {
+            throw new RuntimeException("redis node must to configure");
+        }
         Set<HostAndPort> hostAndPortSet = new HashSet<>();
         HostAndPort      hostAndPort;
-        // ip:port,ip:port
-        String[] hostAndPorts = redisNodes.split(",");
-        for (String hostAndPortString : hostAndPorts) {
-            String[] info = hostAndPortString.split(":");
-            hostAndPort = new HostAndPort(info[0], Integer.parseInt(info[1]));
+        // ip:port;ip:port
+        String[] nodes = redisNode.split(SEMICOLON);
+
+        String  password = null;
+        boolean flag     = true;
+        for (String node : nodes) {
+            URI uri;
+            try {
+                uri = new URI(node);
+            } catch (URISyntaxException e) {
+                throw new RuntimeException("redis node analysis error, please use pattern like redis://[password@]ip:port[/database], sentinelNode = " + node);
+            }
+            if (!Objects.equals(uri.getScheme(), AGREEMENT)) {
+                throw new RuntimeException("please use [redis://] agreement");
+            }
+
+            String ps = JedisURIHelper.getPassword(uri);
+            if (flag && StringUtils.isNotBlank(ps)) {
+                password = ps;
+                flag = false;
+            }
+            hostAndPort = new HostAndPort(uri.getHost(), uri.getPort());
             hostAndPortSet.add(hostAndPort);
         }
         return new JedisCluster(hostAndPortSet,
-                                timeout,
-                                10000,
-                                5,
-                                StringUtils.isBlank(password) ? null : password,
+                                connectionTimeout,
+                                soTimeout,
+                                DEFAULT_MAX_REDIRECTIONS,
+                                password,
                                 jedisPoolConfig());
     }
 }
