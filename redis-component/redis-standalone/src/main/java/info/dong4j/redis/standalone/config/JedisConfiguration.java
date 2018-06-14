@@ -2,6 +2,7 @@ package info.dong4j.redis.standalone.config;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -68,6 +69,7 @@ public class JedisConfiguration {
      *
      * @return the jedis pool
      */
+    @ConditionalOnProperty(value = "redis.model", havingValue = "standalone")
     @Bean(name = "jedisPool", destroyMethod = "destroy")
     public JedisPool jedisPool() {
         return new JedisPool(jedisPoolConfig(),
